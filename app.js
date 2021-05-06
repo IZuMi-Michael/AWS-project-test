@@ -50,19 +50,28 @@ app.get('/calc', (req, res) => {
     // '%20'を'+'へ変換
     const decodedQuery = decodeURIComponent(encodedQuery.replace(/\%20/g, '+'))
     // console.log(decodedQuery)
-　　 
-    // '0~9,+,-,*,/,()'を含めない正規表現
-    const regexNeg = new RegExp('[^-0-9()+*/]')
 
-    // 分離演算符と数字
-    const operatorSeparator = (string) => { 
-        return string.split(/([-()+*/])/g) 
+    // '0~9,+,-,*,/,()'を含めない正規表現
+    const regex = new RegExp('[^-0-9()+*/]')
+    //
+    const regexNeg = new RegExp('^(-[0-9]+)')
+    const regexNegMatch = decodedQuery.match(regexNeg)
+
+    const regexNegFormatter = (arr) => {
+        const negInt = arr[0]
+        return decodedQuery.replace(regexNeg, `(0${negInt})`)
     }
 
-    if (regexNeg.test(decodedQuery)) {
+    // 分離演算符と数字
+    const spaceSeparator = (string) => { 
+        return string.split(/([-()+*/])/g) 
+    } 
+
+    if (regex.test(decodedQuery)) {
         res.send('ERROR\n').end()
     } else {
-        let parsedInfix = operatorSeparator(decodedQuery).filter(i => i)
+        let spaceSeparatedInfix = spaceSeparator((regexNegMatch) ? regexNegFormatter(regexNegMatch) : decodedQuery)
+        let parsedInfix = spaceSeparatedInfix.filter(i => i)
         console.log(parsedInfix)
         let outputArr = inToPost(parsedInfix)
         // console.log(outputArr)
@@ -72,6 +81,7 @@ app.get('/calc', (req, res) => {
 })
 
 // '/stocker' access check
+let stockTable = new Stock()
 app.get('/stocker', (req, res) => {
     // parse req querys
     const parameter = {}
@@ -124,22 +134,18 @@ app.get('/stocker', (req, res) => {
             res.send('ERROR\n').end()
         } else if (parameter.name.length > 8 ) {
             res.send('ERROR\n').end()
-        } else if (parameter.price) {
-            if (parameter.price <= 0) {
-                res.send('ERROR\n').end()
+        } else if (parameter.price <= 0) {
+            res.send('ERROR\n').end()
+        } else if (parameter.amount) {
+            if (!(parameter.amount > stockTable.names[parameter.name].amount)) {
+                stockTable.addSales(!parameter.price ? 0 : parameter.price, parameter.amount)
+                stockTable.names[parameter.name].amount -= Number(parameter.amount)
             } else {
-                if (parameter.amount) {
-                    if (!(parameter.amount > stockTable.names[parameter.name].amount)) {
-                        stockTable.addSales(parameter.price, parameter.amount)
-                        stockTable.names[parameter.name].amount -= Number(parameter.amount)
-                    } else {
-                        res.send('ERROR\n').end()
-                    }
-                } else {
-                    stockTable.addSales(parameter.price, 1)
-                    stockTable.names[parameter.name].amount -= 1
-                }
+                res.send('ERROR\n').end()
             }
+        } else {
+            stockTable.addSales(!parameter.price ? 0 : parameter.price, 1)
+            stockTable.names[parameter.name].amount -= 1
         }
         console.log(stockTable)
         res.send('SUCCESS\n').end()
