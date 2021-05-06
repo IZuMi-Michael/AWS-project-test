@@ -1,4 +1,4 @@
-import { Stock, addProduct } from '../helper.js'
+import { Stock, addProduct } from './helper.js'
 import express from 'express'
 
 const app = express()
