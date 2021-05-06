@@ -132,9 +132,7 @@ app.get('/stocker', (req, res) => {
     } else if (parameter.function === 'sell') {
         if (!parameter.name || (parameter.amount && (parameter.amount <= 0 || !(Number.isInteger(+parameter.amount))))) {
             res.send('ERROR\n').end()
-        } else if (parameter.name.length > 8 ) {
-            res.send('ERROR\n').end()
-        } else if (parameter.price <= 0) {
+        } else if (parameter.name.length > 8 || parameter.price < 0) {
             res.send('ERROR\n').end()
         } else if (parameter.amount) {
             if (!(parameter.amount > stockTable.names[parameter.name].amount)) {
@@ -144,8 +142,12 @@ app.get('/stocker', (req, res) => {
                 res.send('ERROR\n').end()
             }
         } else {
-            stockTable.addSales(!parameter.price ? 0 : parameter.price, 1)
-            stockTable.names[parameter.name].amount -= 1
+            if (!(stockTable.names[parameter.name].amount === 0)) {
+               stockTable.addSales(!parameter.price ? 0 : parameter.price, 1)
+               stockTable.names[parameter.name].amount -= 1
+            } else {
+                res.send('ERROR\n').end()
+            }
         }
         console.log(stockTable)
         res.send('SUCCESS\n').end()
